@@ -54,48 +54,31 @@ class MainActivity : AppCompatActivity() {
         lastPolicyCheck = now
 
         CoroutineScope(Dispatchers.IO).launch {
-            FirebaseManager.fetchRemoteConfig()
-        }
-
-        if (isMaintenanceMode()) {
-            val intent = Intent(this, MaintenanceActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            try {
+                FirebaseManager.fetchRemoteConfig()
+                FirebaseManager.getGlobalPolicyConfig(this@MainActivity)
+            } catch (_: Exception) {}
+            val ctx = this@MainActivity
+            if (PreferencesManager.isMaintenanceMode(ctx) || FirebaseManager.isMaintenanceMode()) {
+                val i = Intent(ctx, MaintenanceActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                launch(Dispatchers.Main) { ctx.startActivity(i); ctx.finish() }
+                return@launch
             }
-            startActivity(intent)
-            finish()
-            return
-        }
-
-        if (isForceUpdateRequired()) {
-            val intent = Intent(this, ForceUpdateActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-            startActivity(intent)
-            finish()
-        }
-    }
-
-    private fun isMaintenanceMode(): Boolean {
-        return try {
-            PreferencesManager.isMaintenanceMode(this) || FirebaseManager.isMaintenanceMode()
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private fun isForceUpdateRequired(): Boolean {
-        return try {
-            val enabled = PreferencesManager.isForceUpdateEnabled(this)
+            val enabled = PreferencesManager.isForceUpdateEnabled(ctx)
             val minVersion = if (enabled) {
-                PreferencesManager.getMinRequiredVersion(this)
+                PreferencesManager.getMinRequiredVersion(ctx)
             } else {
-                if (!FirebaseManager.isForceUpdateRequired()) return false
+                if (!FirebaseManager.isForceUpdateRequired()) return@launch
                 FirebaseManager.getMinimumVersion()
             }
-            if (minVersion.isBlank()) return false
-            isVersionLowerThan(Constants.CURRENT_VERSION, minVersion)
-        } catch (_: Exception) {
-            false
+            if (minVersion.isNotBlank() && isVersionLowerThan(Constants.CURRENT_VERSION, minVersion)) {
+                val i = Intent(ctx, ForceUpdateActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                }
+                launch(Dispatchers.Main) { ctx.startActivity(i); ctx.finish() }
+            }
         }
     }
 
