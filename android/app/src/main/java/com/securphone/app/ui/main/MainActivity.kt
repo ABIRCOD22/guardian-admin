@@ -11,10 +11,17 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.securphone.app.R
 import com.securphone.app.data.NotificationStore
+import com.securphone.app.data.firebase.FirebaseManager
 import com.securphone.app.data.preferences.PreferencesManager
 import com.securphone.app.databinding.ActivityMainBinding
 import com.securphone.app.services.ProtectionService
+import com.securphone.app.ui.maintenance.MaintenanceActivity
 import com.securphone.app.ui.setup.SetupWizardActivity
+import com.securphone.app.ui.update.ForceUpdateActivity
+import com.securphone.app.utils.Constants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -32,6 +39,76 @@ class MainActivity : AppCompatActivity() {
             startActivity(setupIntent)
             finish()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        checkPolicyConfig()
+    }
+
+    private var lastPolicyCheck = 0L
+
+    private fun checkPolicyConfig() {
+        val now = System.currentTimeMillis()
+        if (now - lastPolicyCheck < 30000) return
+        lastPolicyCheck = now
+
+        CoroutineScope(Dispatchers.IO).launch {
+            FirebaseManager.fetchRemoteConfig()
+        }
+
+        if (isMaintenanceMode()) {
+            val intent = Intent(this, MaintenanceActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
+            return
+        }
+
+        if (isForceUpdateRequired()) {
+            val intent = Intent(this, ForceUpdateActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+            startActivity(intent)
+            finish()
+        }
+    }
+
+    private fun isMaintenanceMode(): Boolean {
+        return try {
+            PreferencesManager.isMaintenanceMode(this) || FirebaseManager.isMaintenanceMode()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun isForceUpdateRequired(): Boolean {
+        return try {
+            val enabled = PreferencesManager.isForceUpdateEnabled(this)
+            val minVersion = if (enabled) {
+                PreferencesManager.getMinRequiredVersion(this)
+            } else {
+                if (!FirebaseManager.isForceUpdateRequired()) return false
+                FirebaseManager.getMinimumVersion()
+            }
+            if (minVersion.isBlank()) return false
+            isVersionLowerThan(Constants.CURRENT_VERSION, minVersion)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun isVersionLowerThan(current: String, minimum: String): Boolean {
+        val currentParts = current.split(".").map { it.toIntOrNull() ?: 0 }
+        val minParts = minimum.split(".").map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(currentParts.size, minParts.size)) {
+            val c = currentParts.getOrElse(i) { 0 }
+            val m = minParts.getOrElse(i) { 0 }
+            if (c < m) return true
+            if (c > m) return false
+        }
+        return false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
