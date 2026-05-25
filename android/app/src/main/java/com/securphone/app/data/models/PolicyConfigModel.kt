@@ -11,6 +11,7 @@ data class PolicyConfigModel(
     val forceUpdate: Boolean = false,
     val minRequiredVersion: String = "1.0.0",
     val updateMessage: String = "",
+    val updateUrl: String = "",
     val globalAnnouncement: String = "",
     val announcementSeverity: String = "info",
     val updatedAt: Long = System.currentTimeMillis(),

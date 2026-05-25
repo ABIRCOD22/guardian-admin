@@ -93,7 +93,7 @@ const memDb: {
     maintenanceStartTime: "", maintenanceEndTime: "", announcementEnabled: false, announcementTitle: "",
     announcementBody: "", announcementPriority: "Info", panicTriggerKeyword: "ECLIPSE", maxPinAttempts: 5,
     alarmAudioConfig: "Siren - High Frequency", defaultVolumeOverride: 100,
-    forceUpdate: false, minRequiredVersion: "1.0.0", updateMessage: ""
+    forceUpdate: false, minRequiredVersion: "1.0.0", updateMessage: "", updateUrl: ""
   },
   users: [],
   feed: []
@@ -315,7 +315,8 @@ app.get("/api/state", async (req, res) => {
       alarmAudioConfig: policy.sirenType || "Siren - High Frequency", defaultVolumeOverride: 100,
       forceUpdate: policy.forceUpdate || false,
       minRequiredVersion: policy.minRequiredVersion || "1.0.0",
-      updateMessage: policy.updateMessage || ""
+      updateMessage: policy.updateMessage || "",
+      updateUrl: policy.updateUrl || ""
     };
     const feed: LiveFeedItem[] = [];
 
@@ -531,6 +532,7 @@ app.post("/api/configs", async (req, res) => {
     if (updates.forceUpdate !== undefined) mapped.forceUpdate = updates.forceUpdate;
     if (updates.minRequiredVersion !== undefined) mapped.minRequiredVersion = updates.minRequiredVersion;
     if (updates.updateMessage !== undefined) mapped.updateMessage = updates.updateMessage;
+    if (updates.updateUrl !== undefined) mapped.updateUrl = updates.updateUrl;
         mapped.updatedAt = admin.firestore.FieldValue.serverTimestamp();
         await firestore.collection("policies").doc("global").set(mapped, { merge: true });
         // Also update Remote Config so devices pick it up even without FCM
@@ -549,6 +551,9 @@ app.post("/api/configs", async (req, res) => {
           if (updates.updateMessage !== undefined) {
             template.parameters["update_message"] = { defaultValue: { value: String(updates.updateMessage) } };
           }
+          if (updates.updateUrl !== undefined) {
+            template.parameters["update_url"] = { defaultValue: { value: String(updates.updateUrl) } };
+          }
           template.parameters["maintenance_mode_maintenance_message"] = {
             defaultValue: { value: updates.maintenanceSplashMessage ?? "" }
           };
@@ -566,6 +571,7 @@ app.post("/api/configs", async (req, res) => {
             if (updates.forceUpdate !== undefined) userPolicyFields.forceUpdate = updates.forceUpdate;
             if (updates.minRequiredVersion !== undefined) userPolicyFields.minRequiredVersion = updates.minRequiredVersion;
             if (updates.updateMessage !== undefined) userPolicyFields.updateMessage = updates.updateMessage;
+            if (updates.updateUrl !== undefined) userPolicyFields.updateUrl = updates.updateUrl;
             if (Object.keys(userPolicyFields).length > 0) {
               userPolicyFields.policyUpdatedAt = admin.firestore.FieldValue.serverTimestamp();
               try { await userDoc.ref.update(userPolicyFields); } catch (e) { console.warn("Failed to update user doc", userDoc.id, e); }

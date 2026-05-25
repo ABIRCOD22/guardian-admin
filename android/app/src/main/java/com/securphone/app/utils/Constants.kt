@@ -29,6 +29,7 @@ object Constants {
     const val KEY_FORCE_UPDATE = "force_update_enabled"
     const val KEY_MIN_REQUIRED_VERSION = "min_required_version"
     const val KEY_UPDATE_MESSAGE = "update_message_pref"
+    const val KEY_UPDATE_URL = "update_url"
 
     const val KEY_POCKET_SHIELD = "pocket_shield"
     const val KEY_CHARGER_UNPLUG = "charger_unplug"
@@ -99,6 +100,7 @@ object Constants {
     const val RC_KEY_MIN_VERSION = "min_required_version"
     const val RC_KEY_FORCE_UPDATE = "force_update"
     const val RC_KEY_UPDATE_MESSAGE = "update_message"
+    const val RC_KEY_UPDATE_URL = "update_url"
     const val RC_KEY_MAINTENANCE = "maintenance_mode"
     const val RC_KEY_GLOBAL_MESSAGE = "global_message"
     const val RC_KEY_SHOW_GLOBAL_MESSAGE = "show_global_message"

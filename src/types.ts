@@ -69,6 +69,7 @@ export interface SecurityConfig {
   forceUpdate: boolean;
   minRequiredVersion: string;
   updateMessage: string;
+  updateUrl: string;
 }
 
 export interface SecurityUser {

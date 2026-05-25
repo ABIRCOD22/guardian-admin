@@ -455,7 +455,8 @@ object FirebaseManager {
                             maintenanceMessage = data["maintenanceMessage"] as? String ?: "",
                             forceUpdate = data["forceUpdate"] as? Boolean ?: false,
                             minRequiredVersion = data["minRequiredVersion"] as? String ?: "1.0.0",
-                            updateMessage = data["updateMessage"] as? String ?: ""
+                            updateMessage = data["updateMessage"] as? String ?: "",
+                            updateUrl = data["updateUrl"] as? String ?: ""
                         )
                         applyPolicyConfig(context, config)
                         return Result.success(config)
@@ -476,6 +477,7 @@ object FirebaseManager {
         PreferencesManager.setForceUpdateEnabled(context, config.forceUpdate)
         PreferencesManager.setMinRequiredVersion(context, config.minRequiredVersion)
         PreferencesManager.setUpdateMessage(context, config.updateMessage)
+        PreferencesManager.setUpdateUrl(context, config.updateUrl)
         PreferencesManager.setGlobalAnnouncement(context, config.globalAnnouncement)
         PreferencesManager.setAnnouncementSeverity(context, config.announcementSeverity)
     }
@@ -494,6 +496,10 @@ object FirebaseManager {
 
     fun getUpdateMessage(): String {
         return remoteConfig.getString(Constants.RC_KEY_UPDATE_MESSAGE)
+    }
+
+    fun getUpdateUrl(): String {
+        return remoteConfig.getString(Constants.RC_KEY_UPDATE_URL)
     }
 
     fun getLatestVersion(): String {

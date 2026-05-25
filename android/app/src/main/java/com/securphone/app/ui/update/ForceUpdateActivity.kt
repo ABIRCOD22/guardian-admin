@@ -32,10 +32,13 @@ class ForceUpdateActivity : AppCompatActivity() {
         binding.tvMessage.text = msg
 
         binding.btnUpdate.setOnClickListener {
-            val playStoreIntent = Intent(Intent.ACTION_VIEW, Uri.parse(Constants.PLAY_STORE_URL)).apply {
+            val url = PreferencesManager.getUpdateUrl(this).takeIf { it.isNotBlank() }
+                ?: FirebaseManager.getUpdateUrl().takeIf { it.isNotBlank() }
+                ?: Constants.PLAY_STORE_URL
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
-            startActivity(playStoreIntent)
+            startActivity(intent)
         }
 
         pollJob = CoroutineScope(Dispatchers.IO).launch {

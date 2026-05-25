@@ -33,6 +33,10 @@
         <value>A new version is available. Please update to continue.</value>
     </entry>
     <entry>
+        <key>update_url</key>
+        <value></value>
+    </entry>
+    <entry>
         <key>global_message</key>
         <value></value>
     </entry>

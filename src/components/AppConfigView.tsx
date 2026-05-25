@@ -41,6 +41,7 @@ export default function AppConfigView({
   const [forceUpdate, setForceUpdate] = useState(config.forceUpdate);
   const [minRequiredVersion, setMinRequiredVersion] = useState(config.minRequiredVersion);
   const [updateMessage, setUpdateMessage] = useState(config.updateMessage);
+  const [updateUrl, setUpdateUrl] = useState(config.updateUrl);
 
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -69,7 +70,8 @@ export default function AppConfigView({
       defaultVolumeOverride: Number(defaultVolumeOverride),
       forceUpdate,
       minRequiredVersion,
-      updateMessage
+      updateMessage,
+      updateUrl
     });
 
     setTimeout(() => {
@@ -346,6 +348,22 @@ export default function AppConfigView({
                   onChange={(e) => setUpdateMessage(e.target.value)}
                   placeholder="Message shown to users who must update..."
                 />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="font-sans text-[11px] font-bold text-[#8e8a9f] uppercase tracking-wider">
+                  Update Button URL
+                </label>
+                <input
+                  type="url"
+                  disabled={!forceUpdate}
+                  className="w-full bg-[#131127] border border-[#252243] rounded-xl px-4 py-2.5 outline-none font-sans text-sm focus:border-[#6122e6] text-[#00f59b] disabled:opacity-40 disabled:cursor-not-allowed"
+                  value={updateUrl}
+                  onChange={(e) => setUpdateUrl(e.target.value)}
+                  placeholder="https://play.google.com/store/apps/details?id=com.securphone.app"
+                />
+                <span className="font-sans text-[10px] text-[#8e8a9f] leading-normal mt-0.5">
+                  The URL the update button redirects to. Leave empty to use Play Store default.
+                </span>
               </div>
             </div>
 

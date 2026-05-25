@@ -155,6 +155,14 @@ object PreferencesManager {
         getPrefs(context).edit().putString(Constants.KEY_UPDATE_MESSAGE, message).apply()
     }
 
+    fun getUpdateUrl(context: Context): String {
+        return getPrefs(context).getString(Constants.KEY_UPDATE_URL, "") ?: ""
+    }
+
+    fun setUpdateUrl(context: Context, url: String) {
+        getPrefs(context).edit().putString(Constants.KEY_UPDATE_URL, url).apply()
+    }
+
     fun isChargerUnplugEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(Constants.KEY_CHARGER_UNPLUG, false)
     }
