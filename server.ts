@@ -531,15 +531,38 @@ app.post("/api/configs", async (req, res) => {
     if (updates.forceUpdate !== undefined) mapped.forceUpdate = updates.forceUpdate;
     if (updates.minRequiredVersion !== undefined) mapped.minRequiredVersion = updates.minRequiredVersion;
     if (updates.updateMessage !== undefined) mapped.updateMessage = updates.updateMessage;
-    mapped.updatedAt = admin.firestore.FieldValue.serverTimestamp();
-    await firestore.collection("policies").doc("global").set(mapped, { merge: true });
-    // Force remote config refresh on all devices
-    const userSnap = await firestore.collection("users").where("fcmToken", "!=", "").get();
-    for (const userDoc of userSnap.docs) {
-      await sendFcmToToken(userDoc, { action: "update_policy" });
-    }
-    await addFeedEntry("Security policies updated fleet-wide", "key_rotation");
-    res.json({ success: true });
+        mapped.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+        await firestore.collection("policies").doc("global").set(mapped, { merge: true });
+        // Also update Remote Config so devices pick it up even without FCM
+        try {
+          const rc = admin.remoteConfig();
+          const template = await rc.getTemplate();
+          if (updates.maintenanceMode !== undefined) {
+            template.parameters["maintenance_mode"] = { defaultValue: { value: String(updates.maintenanceMode) } };
+          }
+          if (updates.forceUpdate !== undefined) {
+            template.parameters["force_update"] = { defaultValue: { value: String(updates.forceUpdate) } };
+          }
+          if (updates.minRequiredVersion !== undefined) {
+            template.parameters["min_required_version"] = { defaultValue: { value: String(updates.minRequiredVersion) } };
+          }
+          if (updates.updateMessage !== undefined) {
+            template.parameters["update_message"] = { defaultValue: { value: String(updates.updateMessage) } };
+          }
+          template.parameters["maintenance_mode_maintenance_message"] = {
+            defaultValue: { value: updates.maintenanceSplashMessage ?? "" }
+          };
+          await rc.publishTemplate(template);
+        } catch (rcErr) {
+          console.warn("Remote Config update failed (may need IAM permissions):", rcErr);
+        }
+        // Force remote config refresh on all devices
+        const userSnap = await firestore.collection("users").where("fcmToken", "!=", "").get();
+        for (const userDoc of userSnap.docs) {
+          await sendFcmToToken(userDoc, { action: "update_policy" });
+        }
+        await addFeedEntry("Security policies updated fleet-wide", "key_rotation");
+        res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: String(err) });
   }
