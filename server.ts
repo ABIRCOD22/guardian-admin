@@ -91,20 +91,24 @@ async function userDocToSecurityUser(doc: admin.firestore.DocumentSnapshot): Pro
   const d = doc.data() || {};
   const lastActive = d.lastActive?.toMillis?.() || d.lastActive || 0;
   const lastSync = d.lastSyncTimestamp?.toMillis?.() || d.lastSyncTimestamp || 0;
+  const uninstalled = d.uninstalledAt?.toMillis?.() || 0;
   const diff = (ts: number) => { const s = Math.floor((Date.now() - ts) / 1000); if (s < 60) return `${s}s ago`; if (s < 3600) return `${Math.floor(s / 60)}m ago`; if (s < 86400) return `${Math.floor(s / 3600)}h ago`; return `${Math.floor(s / 86400)}d ago`; };
+  let status: "Active" | "Inactive" | "Blocked" = d.isBlocked ? "Blocked" : "Inactive";
+  if (!d.isBlocked && !uninstalled && lastActive > Date.now() - 86400000) status = "Active";
+  if (uninstalled) status = "Inactive";
   return {
     id: doc.id,
     name: d.displayName || d.email || "Unknown",
     email: d.email || "",
     initials: ((d.displayName || d.email || "?").match(/\b\w/g) || []).slice(0, 2).join("").toUpperCase() || "??",
-    status: d.isBlocked ? "Blocked" as const : lastActive > Date.now() - 86400000 ? "Active" as const : "Inactive" as const,
+    status,
     deviceModel: d.deviceModel || d.deviceInfo?.model || "Unknown",
-    lastActive: lastActive ? diff(lastActive) : "Never",
-    protectionActive: d.settings?.isProtectionActive ?? d.shieldActive ?? false,
+    lastActive: uninstalled ? "App uninstalled" : (lastActive ? diff(lastActive) : "Never"),
+    protectionActive: uninstalled ? false : (d.settings?.isProtectionActive ?? d.shieldActive ?? false),
     isPremium: d.memberStatus === "premium",
     deviceId: doc.id,
     osVersion: d.osVersion || d.deviceInfo?.osVersion || "Unknown",
-    lastSync: lastSync ? diff(lastSync) : "Never"
+    lastSync: uninstalled ? "N/A" : (lastSync ? diff(lastSync) : "Never")
   };
 }
 
@@ -136,7 +140,7 @@ function eventDocToEventLog(doc: admin.firestore.DocumentSnapshot): EventLog {
 }
 
 // ---------------------------------------------------------------------------
-// Helper: send FCM to a specific user
+// Helper: send FCM to a specific user; marks user uninstalled on failure
 // ---------------------------------------------------------------------------
 async function sendFcmToUser(userId: string, data: Record<string, string>): Promise<boolean> {
   if (!isFirebaseReady()) return false;
@@ -146,7 +150,38 @@ async function sendFcmToUser(userId: string, data: Record<string, string>): Prom
     if (!token) return false;
     await messaging.send({ token, data, android: { priority: "high" } });
     return true;
-  } catch { return false; }
+  } catch (err: any) {
+    if (err?.errorInfo?.code === "messaging/registration-token-not-registered") {
+      await firestore.collection("users").doc(userId).update({
+        fcmToken: admin.firestore.FieldValue.delete(),
+        isBlocked: true,
+        "settings.isProtectionActive": false,
+        shieldActive: false,
+        uninstalledAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    return false;
+  }
+}
+
+async function sendFcmToToken(userDoc: admin.firestore.DocumentSnapshot, data: Record<string, string>): Promise<boolean> {
+  const token = userDoc.data()?.fcmToken;
+  if (!token) return false;
+  try {
+    await messaging.send({ token, data, android: { priority: "high" } });
+    return true;
+  } catch (err: any) {
+    if (err?.errorInfo?.code === "messaging/registration-token-not-registered") {
+      await userDoc.ref.update({
+        fcmToken: admin.firestore.FieldValue.delete(),
+        isBlocked: true,
+        "settings.isProtectionActive": false,
+        shieldActive: false,
+        uninstalledAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -341,17 +376,12 @@ app.post("/api/broadcasts", async (req, res) => {
       ...(actionUrl ? { actionUrl } : {})
     };
     for (const userDoc of userSnap.docs) {
-      const token = userDoc.data()?.fcmToken;
-      if (!token) continue;
-      try {
-        const audienceMatch =
-          targetAudience === "global" ? true :
-          targetAudience === "premium" ? userDoc.data()?.memberStatus === "premium" :
-          targetAudience === "legacy_os" ? (userDoc.data()?.osVersion || "").includes("Android") : true;
-        if (!audienceMatch) continue;
-        await messaging.send({ token, notification: { title, body }, data: fcmData, android: { priority: "high" } });
-        sent++;
-      } catch {}
+      const audienceMatch =
+        targetAudience === "global" ? true :
+        targetAudience === "premium" ? userDoc.data()?.memberStatus === "premium" :
+        targetAudience === "legacy_os" ? (userDoc.data()?.osVersion || "").includes("Android") : true;
+      if (!audienceMatch) continue;
+      if (await sendFcmToToken(userDoc, fcmData)) sent++;
     }
     await addFeedEntry(`Broadcast "${title}" sent to ${sent} devices`, "sync");
     res.json({ success: true, broadcast: { id: ref.id, ...broadcast, deliveredCount: sent, successPercentage: sent > 0 ? 100 : 0 } });
@@ -382,9 +412,7 @@ app.post("/api/configs", async (req, res) => {
     // Force remote config refresh on all devices
     const userSnap = await firestore.collection("users").where("fcmToken", "!=", "").get();
     for (const userDoc of userSnap.docs) {
-      const token = userDoc.data()?.fcmToken;
-      if (!token) continue;
-      try { await messaging.send({ token, data: { action: "update_policy" }, android: { priority: "high" } }); } catch {}
+      await sendFcmToToken(userDoc, { action: "update_policy" });
     }
     await addFeedEntry("Security policies updated fleet-wide", "key_rotation");
     res.json({ success: true });
