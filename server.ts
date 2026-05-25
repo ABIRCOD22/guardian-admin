@@ -405,6 +405,26 @@ app.post("/api/users/test-trigger", async (req, res) => {
   }
 });
 
+// POST /api/users/stop-alarm — remotely stop siren/alarm on a device
+app.post("/api/users/stop-alarm", async (req, res) => {
+  const { id } = req.body;
+  if (!isFirebaseReady()) return res.status(400).json({ error: "Firebase not connected." });
+  try {
+    const doc = await firestore.collection("users").doc(id).get();
+    if (!doc.exists) return res.status(404).json({ error: "User not found." });
+    if (doc.data()?.uninstalledAt) return res.status(400).json({ error: "Device has been uninstalled." });
+    if (!doc.data()?.fcmToken) return res.status(400).json({ error: "No device registered." });
+
+    const sent = await sendFcmToUser(id, { action: "stop_alarm" });
+    if (!sent) return res.status(500).json({ error: "FCM send failed." });
+
+    await addFeedEntry(`Alarm stopped remotely for device ${id}`, "sync");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 // DELETE /api/users/delete — permanently remove a user account
 app.delete("/api/users/delete", async (req, res) => {
   const { id } = req.body;

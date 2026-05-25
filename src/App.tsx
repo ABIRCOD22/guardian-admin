@@ -220,6 +220,24 @@ export default function App() {
     }
   };
 
+  const handleStopAlarm = async (id: string) => {
+    try {
+      const response = await fetch("/api/users/stop-alarm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      if (response.ok) {
+        alert("Stop signal sent to device.");
+      } else {
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || "Failed to stop alarm.");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleDeleteUser = async (id: string) => {
     if (!confirm("Permanently delete this user account? This cannot be undone.")) return;
     try {
@@ -358,6 +376,7 @@ export default function App() {
               onToggleProtection={handleToggleProtection}
               onToggleStatus={handleToggleStatus}
               onDeleteUser={handleDeleteUser}
+              onStopAlarm={handleStopAlarm}
             />
           )}
 
