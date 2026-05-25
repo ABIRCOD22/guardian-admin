@@ -46,6 +46,7 @@ export default function App() {
   const [apiRequests, setApiRequests] = useState(1204002);
   const [showAuditDrawer, setShowAuditDrawer] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [dangerUsers, setDangerUsers] = useState<SecurityUser[]>([]);
 
   // Expanded detailed inspection sidebar details
   const [inspectedLog, setInspectedLog] = useState<EventLog | null>(null);
@@ -86,6 +87,11 @@ export default function App() {
       clearInterval(counterTimer);
     };
   }, []);
+
+  // Detect users with active alarms
+  useEffect(() => {
+    setDangerUsers(users.filter(u => u.alarmActive));
+  }, [users]);
 
   // Post wrappers matching backend architecture
   const handleToggleProtection = async (id: string) => {
@@ -318,6 +324,22 @@ export default function App() {
       {/* Main View Container */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
         
+        {/* Danger Banner — active alarm notification */}
+        {dangerUsers.length > 0 && (
+          <button
+            onClick={() => setCurrentTab("users")}
+            className="z-50 shrink-0 flex items-center justify-center gap-2 px-4 py-2 bg-[#93000a] border-b-2 border-[#ff5e62] text-white font-mono text-xs font-bold uppercase tracking-wider animate-pulse cursor-pointer hover:bg-[#b00014] transition-all"
+          >
+            <AlertTriangle className="w-4 h-4 text-[#ffea2a]" />
+            <span>
+              {dangerUsers.length === 1
+                ? `${dangerUsers[0].name} device is in danger — alarm playing!`
+                : `${dangerUsers.length} devices in danger — alarms active!`}
+            </span>
+            <span className="ml-1 underline">Click to view</span>
+          </button>
+        )}
+
         {/* Responsive Layout Header */}
         <header className="h-[76px] bg-[#0c0b18] border-b border-[#1e1c31] flex items-center justify-between px-8 relative shrink-0">
           

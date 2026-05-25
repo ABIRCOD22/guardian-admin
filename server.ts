@@ -126,7 +126,8 @@ async function userDocToSecurityUser(doc: admin.firestore.DocumentSnapshot): Pro
     isPremium: d.memberStatus === "premium",
     deviceId: doc.id,
     osVersion: d.osVersion || d.deviceInfo?.osVersion || "Unknown",
-    lastSync: uninstalled ? "N/A" : (lastSync ? diff(lastSync) : "Never")
+    lastSync: uninstalled ? "N/A" : (lastSync ? diff(lastSync) : "Never"),
+    alarmActive: !!d.alarmActive
   };
 }
 
@@ -398,6 +399,7 @@ app.post("/api/users/test-trigger", async (req, res) => {
       if (fresh.data()?.uninstalledAt) return res.status(400).json({ error: "Device unreachable — app uninstalled." });
       return res.status(500).json({ error: "FCM send failed." });
     }
+    await firestore.collection("users").doc(id).update({ alarmActive: true });
     await addFeedEntry(`Test panic trigger sent to ${id}`, "sync");
     res.json({ success: true });
   } catch (err) {
@@ -418,6 +420,7 @@ app.post("/api/users/stop-alarm", async (req, res) => {
     const sent = await sendFcmToUser(id, { action: "stop_alarm" });
     if (!sent) return res.status(500).json({ error: "FCM send failed." });
 
+    await firestore.collection("users").doc(id).update({ alarmActive: false });
     await addFeedEntry(`Alarm stopped remotely for device ${id}`, "sync");
     res.json({ success: true });
   } catch (err) {

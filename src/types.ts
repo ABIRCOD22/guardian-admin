@@ -81,6 +81,7 @@ export interface SecurityUser {
   deviceId: string;
   osVersion: string;
   lastSync: string;
+  alarmActive?: boolean;
 }
 
 export interface LiveFeedItem {
