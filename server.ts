@@ -22,7 +22,7 @@ import {
   SecurityUser,
   LiveFeedItem,
   EventLogStatus
-} from "./src/types.js";
+} from "./src/types.ts";
 
 dotenv.config();
 
