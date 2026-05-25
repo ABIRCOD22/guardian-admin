@@ -381,6 +381,30 @@ app.post("/api/users/toggle-status", async (req, res) => {
   }
 });
 
+// POST /api/users/test-trigger — send test panic trigger to device
+app.post("/api/users/test-trigger", async (req, res) => {
+  const { id } = req.body;
+  if (!isFirebaseReady()) return res.status(400).json({ error: "Firebase not connected." });
+  try {
+    const doc = await firestore.collection("users").doc(id).get();
+    if (!doc.exists) return res.status(404).json({ error: "User not found." });
+    if (doc.data()?.uninstalledAt) return res.status(400).json({ error: "User not available — app uninstalled." });
+    if (!doc.data()?.fcmToken) return res.status(400).json({ error: "User not available — no device registered." });
+
+    const sent = await sendFcmToUser(id, { action: "remote_trigger", sender: "Admin Test", source: "admin_test" });
+    if (!sent) {
+      // re-check for unregistered
+      const fresh = await firestore.collection("users").doc(id).get();
+      if (fresh.data()?.uninstalledAt) return res.status(400).json({ error: "Device unreachable — app uninstalled." });
+      return res.status(500).json({ error: "FCM send failed." });
+    }
+    await addFeedEntry(`Test panic trigger sent to ${id}`, "sync");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
 // POST /api/broadcasts — create and send broadcast
 app.post("/api/broadcasts", async (req, res) => {
   const { title, body, targetAudience, actionUrl } = req.body;

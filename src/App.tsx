@@ -23,6 +23,7 @@ import AnalyticsView from "./components/AnalyticsView.js";
 import EventLogsView from "./components/EventLogsView.js";
 import SettingsView from "./components/SettingsView.js";
 import SecurityAuditsView from "./components/SecurityAuditsView.js";
+import TestView from "./components/TestView.js";
 import LoginView from "./components/LoginView.js";
 
 import { Shield, Sparkles, AlertCircle, AlertTriangle } from "lucide-react";
@@ -284,6 +285,7 @@ export default function App() {
               {currentTab === "app-config" && "Hardware & Security Policies"}
               {currentTab === "analytics" && "Subscriber Metrics Analysis"}
               {currentTab === "event-logs" && "Event Logs & Triage"}
+              {currentTab === "test" && "Test Panic Trigger"}
               {currentTab === "security" && "Zero-Trust Administration Area"}
             </h2>
             <div className="w-1.5 h-1.5 rounded-full bg-[#00f59b] animate-pulse" />
@@ -353,6 +355,10 @@ export default function App() {
               onUpdateStatus={handleUpdateLogStatus}
               onAddActionTrail={handleAddActionTrail}
             />
+          )}
+
+          {currentTab === "test" && (
+            <TestView users={users} />
           )}
 
           {currentTab === "security" && config && (

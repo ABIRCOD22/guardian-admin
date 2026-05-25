@@ -13,6 +13,7 @@ import {
   Activity,
   ScrollText,
   AlertTriangle,
+  Radio,
   LogOut
 } from "lucide-react";
 
@@ -40,7 +41,8 @@ export default function Sidebar({
     { id: "app-config", label: "App Config", icon: Settings2 },
     { id: "analytics", label: "Analytics", icon: Activity },
     { id: "event-logs", label: "Event Logs", icon: ScrollText },
-    { id: "security", label: "Security & Policies", icon: AlertTriangle }
+    { id: "security", label: "Security & Policies", icon: AlertTriangle },
+    { id: "test", label: "Test Trigger", icon: Radio }
   ];
 
   return (
