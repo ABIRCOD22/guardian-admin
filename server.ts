@@ -33,19 +33,37 @@ let firestore: admin.firestore.Firestore;
 let messaging: admin.messaging.Messaging;
 
 try {
-  const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "./service-account.json";
-  const fullPath = path.resolve(serviceAccountPath);
-  if (fs.existsSync(fullPath)) {
-    const serviceAccount = JSON.parse(fs.readFileSync(fullPath, "utf-8"));
+  let serviceAccount: admin.ServiceAccount | null = null;
+
+  // 1. Try FIREBASE_SERVICE_ACCOUNT_JSON env var (paste entire JSON as a Render secret)
+  const jsonEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (jsonEnv) {
+    try {
+      serviceAccount = JSON.parse(jsonEnv) as admin.ServiceAccount;
+      console.log("Loaded service account from FIREBASE_SERVICE_ACCOUNT_JSON env var.");
+    } catch { console.warn("FIREBASE_SERVICE_ACCOUNT_JSON is set but invalid JSON."); }
+  }
+
+  // 2. Fallback to file path
+  if (!serviceAccount) {
+    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || "./service-account.json";
+    const fullPath = path.resolve(serviceAccountPath);
+    if (fs.existsSync(fullPath)) {
+      serviceAccount = JSON.parse(fs.readFileSync(fullPath, "utf-8"));
+      console.log("Loaded service account from", fullPath);
+    }
+  }
+
+  if (serviceAccount) {
     admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+      credential: admin.credential.cert(serviceAccount),
       projectId: process.env.FIREBASE_PROJECT_ID,
     });
     firestore = admin.firestore();
     messaging = admin.messaging();
     console.log("Firebase Admin SDK initialized successfully.");
   } else {
-    console.warn("Service account file not found at", fullPath, "— running in in-memory fallback mode.");
+    console.warn("No service account found — running in in-memory fallback mode.");
   }
 } catch (err) {
   console.error("Firebase Admin SDK init failed — falling back to in-memory mode.", err);
