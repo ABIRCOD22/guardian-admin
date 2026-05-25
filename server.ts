@@ -92,7 +92,8 @@ const memDb: {
     lastSync: "N/A", apiRequests24h: 0, maintenanceMode: false, maintenanceSplashMessage: "",
     maintenanceStartTime: "", maintenanceEndTime: "", announcementEnabled: false, announcementTitle: "",
     announcementBody: "", announcementPriority: "Info", panicTriggerKeyword: "ECLIPSE", maxPinAttempts: 5,
-    alarmAudioConfig: "Siren - High Frequency", defaultVolumeOverride: 100
+    alarmAudioConfig: "Siren - High Frequency", defaultVolumeOverride: 100,
+    forceUpdate: false, minRequiredVersion: "1.0.0", updateMessage: ""
   },
   users: [],
   feed: []
@@ -311,7 +312,10 @@ app.get("/api/state", async (req, res) => {
       announcementTitle: "", announcementBody: policy.globalAnnouncement || "",
       announcementPriority: (policy.announcementSeverity === "warning" ? "Warning" : policy.announcementSeverity === "critical" ? "Critical" : "Info") as "Info" | "Warning" | "Critical",
       panicTriggerKeyword: policy.panicTriggerKeyword || "ECLIPSE", maxPinAttempts: policy.maxPinAttempts || 5,
-      alarmAudioConfig: policy.sirenType || "Siren - High Frequency", defaultVolumeOverride: 100
+      alarmAudioConfig: policy.sirenType || "Siren - High Frequency", defaultVolumeOverride: 100,
+      forceUpdate: policy.forceUpdate || false,
+      minRequiredVersion: policy.minRequiredVersion || "1.0.0",
+      updateMessage: policy.updateMessage || ""
     };
     const feed: LiveFeedItem[] = [];
 
@@ -524,6 +528,9 @@ app.post("/api/configs", async (req, res) => {
     if (updates.maintenanceSplashMessage !== undefined) mapped.maintenanceMessage = updates.maintenanceSplashMessage;
     if (updates.announcementBody !== undefined) mapped.globalAnnouncement = updates.announcementBody;
     if (updates.announcementPriority !== undefined) mapped.announcementSeverity = updates.announcementPriority.toLowerCase();
+    if (updates.forceUpdate !== undefined) mapped.forceUpdate = updates.forceUpdate;
+    if (updates.minRequiredVersion !== undefined) mapped.minRequiredVersion = updates.minRequiredVersion;
+    if (updates.updateMessage !== undefined) mapped.updateMessage = updates.updateMessage;
     mapped.updatedAt = admin.firestore.FieldValue.serverTimestamp();
     await firestore.collection("policies").doc("global").set(mapped, { merge: true });
     // Force remote config refresh on all devices

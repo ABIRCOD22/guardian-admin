@@ -66,6 +66,9 @@ export interface SecurityConfig {
   maxPinAttempts: number;
   alarmAudioConfig: string;
   defaultVolumeOverride: number; // 0 to 100
+  forceUpdate: boolean;
+  minRequiredVersion: string;
+  updateMessage: string;
 }
 
 export interface SecurityUser {

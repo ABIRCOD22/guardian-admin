@@ -38,6 +38,9 @@ export default function AppConfigView({
   const [maxPinAttempts, setMaxPinAttempts] = useState(config.maxPinAttempts);
   const [alarmAudioConfig, setAlarmAudioConfig] = useState(config.alarmAudioConfig);
   const [defaultVolumeOverride, setDefaultVolumeOverride] = useState(config.defaultVolumeOverride);
+  const [forceUpdate, setForceUpdate] = useState(config.forceUpdate);
+  const [minRequiredVersion, setMinRequiredVersion] = useState(config.minRequiredVersion);
+  const [updateMessage, setUpdateMessage] = useState(config.updateMessage);
 
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -63,7 +66,10 @@ export default function AppConfigView({
       panicTriggerKeyword,
       maxPinAttempts: Number(maxPinAttempts),
       alarmAudioConfig,
-      defaultVolumeOverride: Number(defaultVolumeOverride)
+      defaultVolumeOverride: Number(defaultVolumeOverride),
+      forceUpdate,
+      minRequiredVersion,
+      updateMessage
     });
 
     setTimeout(() => {
@@ -270,6 +276,69 @@ export default function AppConfigView({
                   className="w-full bg-[#131127] border border-[#252243] rounded-xl px-3 py-2 outline-none font-sans text-xs focus:border-[#6122e6] text-white disabled:opacity-40"
                   value={maintenanceEndTime}
                   onChange={(e) => setMaintenanceEndTime(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Force Update Section */}
+            <div className="border-t border-[#1e1c31] pt-5 mt-2">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                  <RefreshCw className="text-[#fc2e5c] w-5 h-5 shrink-0" />
+                  <h4 className="font-sans font-bold text-sm text-white">
+                    Force App Update
+                  </h4>
+                </div>
+                <div className="flex items-center gap-3 select-none">
+                  <button
+                    type="button"
+                    onClick={() => setForceUpdate(!forceUpdate)}
+                    className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      forceUpdate ? "bg-[#fc2e5c]" : "bg-[#252243]"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        forceUpdate ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                  <span className={`font-sans text-[10px] font-bold ${
+                    forceUpdate ? "text-[#fc2e5c]" : "text-[#8e8a9f]/40"
+                  }`}>
+                    {forceUpdate ? "ENFORCED" : "OFF"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5 mb-4">
+                <label className="font-sans text-[11px] font-bold text-[#8e8a9f] uppercase tracking-wider">
+                  Minimum Required Version
+                </label>
+                <input
+                  type="text"
+                  disabled={!forceUpdate}
+                  className="w-full bg-[#131127] border border-[#252243] rounded-xl px-4 py-2.5 outline-none font-mono text-sm focus:border-[#6122e6] text-[#00f59b] disabled:opacity-40 disabled:cursor-not-allowed"
+                  value={minRequiredVersion}
+                  onChange={(e) => setMinRequiredVersion(e.target.value)}
+                  placeholder="e.g. 2.0.0"
+                />
+                <span className="font-sans text-[10px] text-[#8e8a9f] leading-normal mt-0.5">
+                  Devices running a version lower than this will be blocked until they update.
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="font-sans text-[11px] font-bold text-[#8e8a9f] uppercase tracking-wider">
+                  Update Prompt Message
+                </label>
+                <textarea
+                  rows={2}
+                  disabled={!forceUpdate}
+                  className="w-full bg-[#131127] border border-[#252243] rounded-xl px-4 py-2.5 outline-none font-sans text-sm focus:border-[#6122e6] text-white disabled:opacity-40 disabled:cursor-not-allowed"
+                  value={updateMessage}
+                  onChange={(e) => setUpdateMessage(e.target.value)}
+                  placeholder="Message shown to users who must update..."
                 />
               </div>
             </div>
