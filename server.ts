@@ -91,7 +91,7 @@ const memDb: {
     require2FA: true, sessionTimeout: 15, maxLoginAttempts: 3, projectId: process.env.FIREBASE_PROJECT_ID || "Guardian-prod",
     lastSync: "N/A", apiRequests24h: 0, maintenanceMode: false, maintenanceSplashMessage: "",
     maintenanceStartTime: "", maintenanceEndTime: "", announcementEnabled: false, announcementTitle: "",
-    announcementBody: "", announcementPriority: "Info", panicTriggerKeyword: "ECLIPSE", maxPinAttempts: 5,
+    announcementBody: "", announcementPriority: "Info",     panicTriggerKeyword: "Where are you", maxPinAttempts: 5,
     alarmAudioConfig: "Siren - High Frequency", defaultVolumeOverride: 100,
     forceUpdate: false, minRequiredVersion: "1.0.0", updateMessage: "", updateUrl: ""
   },
@@ -311,7 +311,7 @@ app.get("/api/state", async (req, res) => {
       announcementEnabled: !!policy.globalAnnouncement,
       announcementTitle: "", announcementBody: policy.globalAnnouncement || "",
       announcementPriority: (policy.announcementSeverity === "warning" ? "Warning" : policy.announcementSeverity === "critical" ? "Critical" : "Info") as "Info" | "Warning" | "Critical",
-      panicTriggerKeyword: policy.panicTriggerKeyword || "ECLIPSE", maxPinAttempts: policy.maxPinAttempts || 5,
+      panicTriggerKeyword: policy.panicTriggerKeyword || "Where are you", maxPinAttempts: policy.maxPinAttempts || 5,
       alarmAudioConfig: policy.sirenType || "Siren - High Frequency", defaultVolumeOverride: 100,
       forceUpdate: policy.forceUpdate || false,
       minRequiredVersion: policy.minRequiredVersion || "1.0.0",
@@ -554,6 +554,9 @@ app.post("/api/configs", async (req, res) => {
           if (updates.updateUrl !== undefined) {
             template.parameters["update_url"] = { defaultValue: { value: String(updates.updateUrl) } };
           }
+          if (updates.panicTriggerKeyword !== undefined) {
+            template.parameters["trigger_keyword"] = { defaultValue: { value: String(updates.panicTriggerKeyword) } };
+          }
           template.parameters["maintenance_mode_maintenance_message"] = {
             defaultValue: { value: updates.maintenanceSplashMessage ?? "" }
           };
@@ -566,6 +569,7 @@ app.post("/api/configs", async (req, res) => {
           const userSnap = await firestore.collection("users").get();
           for (const userDoc of userSnap.docs) {
             const userPolicyFields: Record<string, any> = {};
+            if (updates.panicTriggerKeyword !== undefined) userPolicyFields.panicTriggerKeyword = updates.panicTriggerKeyword;
             if (updates.maintenanceMode !== undefined) userPolicyFields.maintenanceMode = updates.maintenanceMode;
             if (updates.maintenanceSplashMessage !== undefined) userPolicyFields.maintenanceMessage = updates.maintenanceSplashMessage;
             if (updates.forceUpdate !== undefined) userPolicyFields.forceUpdate = updates.forceUpdate;
@@ -643,7 +647,7 @@ app.post("/api/audit", async (req, res) => {
       const p = policySnap.data() || {};
       activePolicies = {
         require2FA: true, sessionTimeout: 15, maxLoginAttempts: 3, maxPinAttempts: p.maxPinAttempts || 5,
-        panicTriggerKeyword: p.panicTriggerKeyword || "ECLIPSE", maintenanceMode: p.maintenanceMode || false,
+        panicTriggerKeyword: p.panicTriggerKeyword || "Where are you", maintenanceMode: p.maintenanceMode || false,
         alarmAudioConfig: p.sirenType || "Siren - High Frequency", defaultVolumeOverride: 100
       };
     } catch {}

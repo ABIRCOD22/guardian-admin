@@ -136,7 +136,7 @@ export default function AppConfigView({
                 type="text"
                 className="w-full bg-[#131127] border border-[#252243] rounded-xl px-4 py-2.5 outline-none font-mono text-sm focus:border-[#6122e6] text-[#00f59b]"
                 value={panicTriggerKeyword}
-                onChange={(e) => setPanicTriggerKeyword(e.target.value.toUpperCase())}
+                onChange={(e) => setPanicTriggerKeyword(e.target.value)}
                 placeholder="e.g. BREAK_PROTOCOLS"
               />
               <span className="font-sans text-[10px] text-[#8e8a9f] leading-normal mt-0.5">
