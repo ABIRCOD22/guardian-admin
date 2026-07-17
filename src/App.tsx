@@ -28,6 +28,9 @@ import VaultView from "./components/VaultView.js";
 import LoginView from "./components/LoginView.js";
 import AlarmPanel from "./components/AlarmPanel.js";
 import LiveMapView from "./components/LiveMapView.js";
+import ErrorBoundary from "./components/ErrorBoundary.js";
+import DebugLogView from "./components/DebugLogView.js";
+import { logger } from "./utils/logger.js";
 
 import { Shield, Sparkles, AlertCircle, AlertTriangle } from "lucide-react";
 
@@ -66,19 +69,33 @@ export default function App() {
         setConfig(data.config);
         setUsers(data.users);
         setFeed(data.feed);
+        logger.info("App", "fetchState — state loaded", {
+          adminCount: data.admins?.length,
+          userCount: data.users?.length,
+          broadcastCount: data.broadcasts?.length,
+          logCount: data.logs?.length
+        });
       }
     } catch (err) {
-      console.error("Failed loading backend API configuration state. Utilizing memory buffers.", err);
+      logger.error("App", "fetchState — failed to load state", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    logger.info("App", "App mounted, fetching initial state");
+    let pollCount = 0;
     fetchState();
 
     // Live poll: refresh users, broadcasts, logs, feed every 7s from backend
-    const pollTimer = setInterval(fetchState, 7000);
+    const pollTimer = setInterval(() => {
+      pollCount++;
+      if (pollCount % 10 === 0) {
+        logger.debug("App", `Poll #${pollCount} — fetching state`);
+      }
+      fetchState();
+    }, 7000);
 
     // Interval ticking system to make dashboard stats feel completely live and interconnected
     const counterTimer = setInterval(() => {
@@ -105,13 +122,15 @@ export default function App() {
         body: JSON.stringify({ id })
       });
       if (response.ok) {
+        logger.info("App", "handleToggleProtection — success", { id });
         fetchState();
       } else {
         const data = await response.json().catch(() => ({}));
+        logger.warn("App", "handleToggleProtection — request not ok", { id, error: data.error });
         alert(data.error || "Failed to toggle protection — device may be unavailable.");
       }
     } catch (err) {
-      console.error(err);
+      logger.error("App", "handleToggleProtection — error", { id }, err as Error);
     }
   };
 
@@ -123,13 +142,15 @@ export default function App() {
         body: JSON.stringify({ id, status })
       });
       if (response.ok) {
+        logger.info("App", "handleToggleStatus — success", { id, status });
         fetchState();
       } else {
         const data = await response.json().catch(() => ({}));
+        logger.warn("App", "handleToggleStatus — request not ok", { id, status, error: data.error });
         alert(data.error || "Failed to update status — device may be unavailable.");
       }
     } catch (err) {
-      console.error(err);
+      logger.error("App", "handleToggleStatus — error", { id, status }, err as Error);
     }
   };
 
@@ -148,11 +169,12 @@ export default function App() {
         body: JSON.stringify(bcPayload)
       });
       if (response.ok) {
+        logger.info("App", "handleAddBroadcast — success", { title: bcPayload.title, audience: bcPayload.targetAudience });
         fetchState();
         alert("Emergency advisory dispatched successfully on targeted spectrum.");
       }
     } catch (err) {
-      console.error(err);
+      logger.error("App", "handleAddBroadcast — error", { title: bcPayload.title }, err as Error);
     }
   };
 
@@ -164,10 +186,11 @@ export default function App() {
         body: JSON.stringify(updates)
       });
       if (response.ok) {
+        logger.info("App", "handleUpdateConfig — success", { updates });
         fetchState();
       }
     } catch (err) {
-      console.error(err);
+      logger.error("App", "handleUpdateConfig — error", { updates }, err as Error);
     }
   };
 
@@ -179,10 +202,11 @@ export default function App() {
         body: JSON.stringify(newAdmin)
       });
       if (response.ok) {
+        logger.info("App", "handleAddAdmin — success", { name: newAdmin.name, email: newAdmin.email, role: newAdmin.role });
         fetchState();
       }
     } catch (err) {
-      console.error(err);
+      logger.error("App", "handleAddAdmin — error", { name: newAdmin.name, email: newAdmin.email }, err as Error);
     }
   };
 
@@ -221,10 +245,12 @@ export default function App() {
       });
       if (response.ok) {
         const data = await response.json();
+        logger.info("App", "handleRunAudit — success", { promptLength: promptText.length });
         return data.report;
       }
       throw new Error();
     } catch (err) {
+      logger.error("App", "handleRunAudit — error", { promptLength: promptText.length }, err as Error);
       return "# Audit Handshake Failed\nFailed to establish connection. Offline backup guidelines initialized.";
     }
   };
@@ -237,13 +263,15 @@ export default function App() {
         body: JSON.stringify({ id })
       });
       if (response.ok) {
+        logger.info("App", "handleStopAlarm — success", { id });
         alert("Stop signal sent to device.");
       } else {
         const data = await response.json().catch(() => ({}));
+        logger.warn("App", "handleStopAlarm — request not ok", { id, error: data.error });
         alert(data.error || "Failed to stop alarm.");
       }
     } catch (err) {
-      console.error(err);
+      logger.error("App", "handleStopAlarm — error", { id }, err as Error);
     }
   };
 
@@ -256,13 +284,15 @@ export default function App() {
         body: JSON.stringify({ id })
       });
       if (response.ok) {
+        logger.info("App", "handleDeleteUser — success", { id });
         fetchState();
       } else {
         const data = await response.json().catch(() => ({}));
+        logger.warn("App", "handleDeleteUser — request not ok", { id, error: data.error });
         alert(data.error || "Failed to delete user.");
       }
     } catch (err) {
-      console.error(err);
+      logger.error("App", "handleDeleteUser — error", { id }, err as Error);
     }
   };
 
@@ -300,6 +330,7 @@ export default function App() {
   }
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen flex bg-[#06050e] text-white select-none h-full overflow-hidden w-full font-sans antialiased">
       
       {/* Visual background pattern with pristine dot grid matching stitch blueprint style */}
@@ -365,6 +396,7 @@ export default function App() {
               {currentTab === "event-logs" && "Event Logs & Triage"}
               {currentTab === "test" && "Test Panic Trigger"}
               {currentTab === "vault" && "Secure Vault"}
+              {currentTab === "debug" && "Debug Console & Logs"}
               {currentTab === "security" && "Zero-Trust Administration Area"}
             </h2>
             <div className="w-1.5 h-1.5 rounded-full bg-[#00f59b] animate-pulse" />
@@ -457,6 +489,10 @@ export default function App() {
                 <VaultView />
               )}
 
+              {currentTab === "debug" && (
+                <DebugLogView />
+              )}
+
               {currentTab === "security" && config && (
             <SettingsView
               admins={admins}
@@ -490,5 +526,6 @@ export default function App() {
       )}
 
     </div>
+    </ErrorBoundary>
   );
 }

@@ -265,6 +265,17 @@ app.use((req, res, next) => {
   next();
 });
 
+// Structured request logger
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    const level = res.statusCode >= 500 ? "ERROR" : res.statusCode >= 400 ? "WARN" : "INFO";
+    console.log(`[${new Date().toISOString()}] [${level}] ${req.method} ${req.originalUrl} → ${res.statusCode} (${duration}ms)`);
+  });
+  next();
+});
+
 // =========================================================================
 // API ROUTES
 // =========================================================================
@@ -322,7 +333,7 @@ app.get("/api/state", async (req, res) => {
 
     res.json({ admins, broadcasts, logs, config, users, feed });
   } catch (err) {
-    console.error("Fetch state error:", err);
+    console.error(`[ERROR] [${new Date().toISOString()}] GET /api/state:`, err);
     res.json(memDb);
   }
 });
@@ -363,6 +374,7 @@ app.post("/api/users/toggle-protection", async (req, res) => {
     user.protectionActive = newState;
     res.json({ success: true, user });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/users/toggle-protection:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -392,6 +404,7 @@ app.post("/api/users/toggle-status", async (req, res) => {
     user.status = status;
     res.json({ success: true, user });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/users/toggle-status:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -417,6 +430,7 @@ app.post("/api/users/test-trigger", async (req, res) => {
     await addFeedEntry(`Test panic trigger sent to ${id}`, "sync");
     res.json({ success: true });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/users/test-trigger:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -438,6 +452,7 @@ app.post("/api/users/stop-alarm", async (req, res) => {
     await addFeedEntry(`Alarm stopped remotely for device ${id}`, "sync");
     res.json({ success: true });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/users/stop-alarm:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -464,6 +479,7 @@ app.delete("/api/users/delete", async (req, res) => {
     await addFeedEntry(`User ${id} account permanently deleted`, "key_rotation");
     res.json({ success: true });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] DELETE /api/users/delete:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -508,6 +524,7 @@ app.post("/api/broadcasts", async (req, res) => {
     await addFeedEntry(`Broadcast "${title}" sent to ${sent} devices`, "sync");
     res.json({ success: true, broadcast: { id: ref.id, ...broadcast, deliveredCount: sent, successPercentage: sent > 0 ? 100 : 0 } });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/broadcasts:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -593,6 +610,7 @@ app.post("/api/configs", async (req, res) => {
         await addFeedEntry("Security policies updated fleet-wide", "key_rotation");
         res.json({ success: true });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/configs:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -615,6 +633,7 @@ app.post("/api/admins", async (req, res) => {
     await addFeedEntry(`New admin ${name} added`, "sync");
     res.json({ success: true, admin: { id: ref.id, name, email, avatar: "", role: role || "Analyst", lastLogin: "Never" } });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/admins:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -718,7 +737,7 @@ Format in polished Markdown with headings, bold indicators, and code blocks wher
     const report = response.text || "Failed to generate audit.";
     res.json({ report });
   } catch (error) {
-    console.error("Gemini audit failed, using local heuristic:", error);
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/audit:`, error);
     const backupReport = getLocalHeuristicReport(prompt);
     res.json({ report: backupReport });
   }
@@ -753,6 +772,7 @@ app.post("/api/device/command", async (req, res) => {
     await addFeedEntry(`Command "${command}" sent to device ${userId}`, "sync");
     res.json({ success: true });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] POST /api/device/command:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
@@ -780,7 +800,7 @@ app.get("/api/emergencies", async (req, res) => {
     });
     res.json({ emergencies });
   } catch (err) {
-    console.error("Failed to fetch emergencies:", err);
+    console.error(`[ERROR] [${new Date().toISOString()}] GET /api/emergencies:`, err);
     res.json({ emergencies: [] });
   }
 });
@@ -836,6 +856,7 @@ app.get("/api/vault/data", async (req, res) => {
     });
     res.json({ users });
   } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] GET /api/vault/data:`, err);
     res.status(500).json({ error: String(err) });
   }
 });
