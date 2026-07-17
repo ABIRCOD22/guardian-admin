@@ -426,7 +426,7 @@ export default function App() {
 
         {/* Tab view portal mapping */}
         <main className="flex-1 overflow-y-auto p-8 relative z-10">
-          {currentTab === "dashboard" && (
+          <div className={currentTab === "dashboard" ? "" : "hidden"}>
             <DashboardView
               users={users}
               logs={logs}
@@ -436,9 +436,9 @@ export default function App() {
               onOpenLogDetails={handleOpenLogDetails}
               onNavigateToTab={handleNavigateToTab}
             />
-          )}
+          </div>
 
-          {currentTab === "users" && (
+          <div className={currentTab === "users" ? "" : "hidden"}>
             <UsersView
               users={users}
               onToggleProtection={handleToggleProtection}
@@ -446,33 +446,37 @@ export default function App() {
               onDeleteUser={handleDeleteUser}
               onStopAlarm={handleStopAlarm}
             />
-          )}
+          </div>
 
-          {currentTab === "notifications" && (
+          <div className={currentTab === "notifications" ? "" : "hidden"}>
             <NotificationsView
               broadcasts={broadcasts}
               onAddBroadcast={handleAddBroadcast}
             />
-          )}
+          </div>
 
-          {currentTab === "app-config" && config && (
-            <AppConfigView
-              config={config}
-              onUpdateConfig={handleUpdateConfig}
-            />
-          )}
+          <div className={currentTab === "app-config" ? "" : "hidden"}>
+            {config && (
+              <AppConfigView
+                config={config}
+                onUpdateConfig={handleUpdateConfig}
+              />
+            )}
+          </div>
 
-          {currentTab === "analytics" && <AnalyticsView />}
+          <div className={currentTab === "analytics" ? "" : "hidden"}>
+            <AnalyticsView />
+          </div>
 
-          {currentTab === "event-logs" && (
+          <div className={currentTab === "event-logs" ? "" : "hidden"}>
             <EventLogsView
               logs={logs}
               onUpdateStatus={handleUpdateLogStatus}
               onAddActionTrail={handleAddActionTrail}
             />
-          )}
+          </div>
 
-          {currentTab === "live-map" && (
+          <div className={currentTab === "live-map" ? "" : "hidden"}>
             <LiveMapView
               users={users}
               onSendCommand={(userId, command) => {
@@ -481,32 +485,34 @@ export default function App() {
               }}
               onSendAlert={() => fetchState()}
             />
-          )}
+          </div>
 
-              {currentTab === "test" && (
-                <TestView users={users} />
-              )}
+          <div className={currentTab === "test" ? "" : "hidden"}>
+            <TestView users={users} />
+          </div>
 
-              {currentTab === "vault" && (
-                <VaultView />
-              )}
+          <div className={currentTab === "vault" ? "" : "hidden"}>
+            <VaultView />
+          </div>
 
-              {currentTab === "device-logs" && (
-                <DeviceLogsView />
-              )}
+          <div className={currentTab === "device-logs" ? "" : "hidden"}>
+            <DeviceLogsView />
+          </div>
 
-              {currentTab === "debug" && (
-                <DebugLogView />
-              )}
+          <div className={currentTab === "debug" ? "" : "hidden"}>
+            <DebugLogView />
+          </div>
 
-              {currentTab === "security" && config && (
-            <SettingsView
-              admins={admins}
-              config={config}
-              onAddAdmin={handleAddAdmin}
-              onUpdateConfig={handleUpdateConfig}
-            />
-          )}
+          <div className={currentTab === "security" ? "" : "hidden"}>
+            {config && (
+              <SettingsView
+                admins={admins}
+                config={config}
+                onAddAdmin={handleAddAdmin}
+                onUpdateConfig={handleUpdateConfig}
+              />
+            )}
+          </div>
         </main>
       </div>
 
