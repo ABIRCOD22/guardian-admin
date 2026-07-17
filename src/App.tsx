@@ -89,14 +89,11 @@ export default function App() {
     let pollCount = 0;
     fetchState();
 
-    // Live poll: refresh users, broadcasts, logs, feed every 7s from backend
+    // Poll every 30s (Firebase Spark: 50K reads/day max)
     const pollTimer = setInterval(() => {
       pollCount++;
-      if (pollCount % 10 === 0) {
-        logger.debug("App", `Poll #${pollCount} — fetching state`);
-      }
       fetchState();
-    }, 7000);
+    }, 30000);
 
     // Interval ticking system to make dashboard stats feel completely live and interconnected
     const counterTimer = setInterval(() => {

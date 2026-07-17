@@ -27,7 +27,7 @@ export default function DeviceLogsView() {
   const [search, setSearch] = useState("");
   const [levelFilter, setLevelFilter] = useState<string>("ALL");
   const [deviceFilter, setDeviceFilter] = useState<string>("ALL");
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, setAutoRefresh] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const fetchLogs = async () => {
