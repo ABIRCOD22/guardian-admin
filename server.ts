@@ -725,6 +725,67 @@ Format in polished Markdown with headings, bold indicators, and code blocks wher
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/device/command — send FCM command to a device
+// ---------------------------------------------------------------------------
+app.post("/api/device/command", async (req, res) => {
+  const { userId, command } = req.body;
+  if (!userId || !command) return res.status(400).json({ error: "userId and command required." });
+  if (!isFirebaseReady()) return res.status(400).json({ error: "Firebase not connected." });
+  try {
+    const doc = await firestore.collection("users").doc(userId).get();
+    if (!doc.exists) return res.status(404).json({ error: "User not found." });
+    if (doc.data()?.uninstalledAt) return res.status(400).json({ error: "Device has been uninstalled." });
+    const token = doc.data()?.fcmToken;
+    if (!token) return res.status(400).json({ error: "No device registered." });
+
+    const fcmData: Record<string, string> = { command };
+    if (command === "disarm") {
+      fcmData.active = "false";
+    } else if (command === "locate") {
+      fcmData.command = "locate";
+    } else if (command === "siren") {
+      fcmData.command = "siren";
+    }
+
+    const sent = await sendFcmToUser(userId, fcmData);
+    if (!sent) return res.status(500).json({ error: "FCM send failed — device may be offline." });
+
+    await addFeedEntry(`Command "${command}" sent to device ${userId}`, "sync");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// GET /api/emergencies — fetch emergency events from Firestore
+app.get("/api/emergencies", async (req, res) => {
+  if (!isFirebaseReady()) return res.json({ emergencies: [] });
+  try {
+    const snap = await firestore.collection("emergencies")
+      .orderBy("timestamp", "desc")
+      .limit(50)
+      .get();
+    const emergencies = snap.docs.map(d => {
+      const dd = d.data();
+      const ts = dd.timestamp?.toMillis?.() || dd.timestamp || Date.now();
+      return {
+        id: d.id,
+        type: dd.type || "emergency",
+        message: dd.message || "",
+        latitude: dd.latitude || 0,
+        longitude: dd.longitude || 0,
+        timestamp: ts,
+        status: dd.status || "active"
+      };
+    });
+    res.json({ emergencies });
+  } catch (err) {
+    console.error("Failed to fetch emergencies:", err);
+    res.json({ emergencies: [] });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Vault — sensitive user data behind env-var PIN
 // ---------------------------------------------------------------------------
 const VAULT_PIN = process.env.VAULT_PIN || "0000";

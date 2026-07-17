@@ -27,6 +27,7 @@ import TestView from "./components/TestView.js";
 import VaultView from "./components/VaultView.js";
 import LoginView from "./components/LoginView.js";
 import AlarmPanel from "./components/AlarmPanel.js";
+import LiveMapView from "./components/LiveMapView.js";
 
 import { Shield, Sparkles, AlertCircle, AlertTriangle } from "lucide-react";
 
@@ -360,6 +361,7 @@ export default function App() {
               {currentTab === "notifications" && "Direct Dispatch Notifications"}
               {currentTab === "app-config" && "Hardware & Security Policies"}
               {currentTab === "analytics" && "Subscriber Metrics Analysis"}
+              {currentTab === "live-map" && "Live Location & Emergency Map"}
               {currentTab === "event-logs" && "Event Logs & Triage"}
               {currentTab === "test" && "Test Panic Trigger"}
               {currentTab === "vault" && "Secure Vault"}
@@ -433,6 +435,17 @@ export default function App() {
               logs={logs}
               onUpdateStatus={handleUpdateLogStatus}
               onAddActionTrail={handleAddActionTrail}
+            />
+          )}
+
+          {currentTab === "live-map" && (
+            <LiveMapView
+              users={users}
+              onSendCommand={(userId, command) => {
+                if (command === "disarm") handleToggleProtection(userId);
+                if (command === "siren") handleStopAlarm(userId);
+              }}
+              onSendAlert={() => fetchState()}
             />
           )}
 

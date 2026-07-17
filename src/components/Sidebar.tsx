@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Radio,
   Lock,
-  LogOut
+  LogOut,
+  Map
 } from "lucide-react";
 
 interface SidebarProps {
@@ -43,6 +44,7 @@ export default function Sidebar({
     { id: "analytics", label: "Analytics", icon: Activity },
     { id: "event-logs", label: "Event Logs", icon: ScrollText },
     { id: "security", label: "Security & Policies", icon: AlertTriangle },
+    { id: "live-map", label: "Live Map", icon: Map },
     { id: "test", label: "Test Trigger", icon: Radio },
     { id: "vault", label: "Secure Vault", icon: Lock }
   ];
