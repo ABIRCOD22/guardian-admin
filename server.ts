@@ -862,6 +862,40 @@ app.get("/api/vault/data", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Device Logs API — reads from Firestore debugLogs collection
+// ---------------------------------------------------------------------------
+app.get("/api/logs", async (req, res) => {
+  const tag = "GET /api/logs";
+  console.log(`[${new Date().toISOString()}] ${tag}`);
+  if (!isFirebaseReady()) { return res.json({ logs: [] }); }
+  try {
+    const snap = await firestore
+      .collection("debugLogs")
+      .orderBy("timestamp", "desc")
+      .limit(500)
+      .get();
+    const logs = snap.docs.map((d) => {
+      const dd = d.data();
+      return {
+        id: d.id,
+        level: dd.level || "INFO",
+        tag: dd.tag || "",
+        message: dd.message || "",
+        stacktrace: dd.stacktrace || "",
+        timestamp: dd.timestamp || 0,
+        deviceName: dd.deviceName || "",
+        deviceId: dd.deviceId || "",
+        appVersion: dd.appVersion || "",
+      };
+    });
+    res.json({ logs });
+  } catch (err) {
+    console.error(`[ERROR] [${new Date().toISOString()}] ${tag}:`, err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Start server
 // ---------------------------------------------------------------------------
 (async () => {

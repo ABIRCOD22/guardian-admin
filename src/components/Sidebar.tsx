@@ -17,7 +17,8 @@ import {
   Lock,
   LogOut,
   Map,
-  Terminal
+  Terminal,
+  Smartphone
 } from "lucide-react";
 
 interface SidebarProps {
@@ -44,6 +45,7 @@ export default function Sidebar({
     { id: "app-config", label: "App Config", icon: Settings2 },
     { id: "analytics", label: "Analytics", icon: Activity },
     { id: "event-logs", label: "Event Logs", icon: ScrollText },
+    { id: "device-logs", label: "Device Logs", icon: Smartphone },
     { id: "security", label: "Security & Policies", icon: AlertTriangle },
     { id: "live-map", label: "Live Map", icon: Map },
     { id: "test", label: "Test Trigger", icon: Radio },

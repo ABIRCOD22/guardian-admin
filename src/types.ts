@@ -96,3 +96,15 @@ export interface LiveFeedItem {
   text: string;
   timestamp: string;
 }
+
+export interface DeviceLogEntry {
+  id: string;
+  level: string;
+  tag: string;
+  message: string;
+  stacktrace: string;
+  timestamp: number;
+  deviceName: string;
+  deviceId: string;
+  appVersion: string;
+}

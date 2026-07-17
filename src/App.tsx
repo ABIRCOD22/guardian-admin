@@ -30,6 +30,7 @@ import AlarmPanel from "./components/AlarmPanel.js";
 import LiveMapView from "./components/LiveMapView.js";
 import ErrorBoundary from "./components/ErrorBoundary.js";
 import DebugLogView from "./components/DebugLogView.js";
+import DeviceLogsView from "./components/DeviceLogsView.js";
 import { logger } from "./utils/logger.js";
 
 import { Shield, Sparkles, AlertCircle, AlertTriangle } from "lucide-react";
@@ -394,6 +395,7 @@ export default function App() {
               {currentTab === "analytics" && "Subscriber Metrics Analysis"}
               {currentTab === "live-map" && "Live Location & Emergency Map"}
               {currentTab === "event-logs" && "Event Logs & Triage"}
+              {currentTab === "device-logs" && "Device Remote Logs"}
               {currentTab === "test" && "Test Panic Trigger"}
               {currentTab === "vault" && "Secure Vault"}
               {currentTab === "debug" && "Debug Console & Logs"}
@@ -487,6 +489,10 @@ export default function App() {
 
               {currentTab === "vault" && (
                 <VaultView />
+              )}
+
+              {currentTab === "device-logs" && (
+                <DeviceLogsView />
               )}
 
               {currentTab === "debug" && (
