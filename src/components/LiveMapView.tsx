@@ -186,11 +186,10 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
 
       <div className="flex gap-4 flex-1 min-h-0">
         {/* MAP */}
-        <div className="flex-1 bg-[#0c0b18] border border-[#1e1c31] rounded-xl overflow-hidden relative">
+        <div className="flex-1 bg-[#0c0b18] border border-[#1e1c31] relative">
           <style>{`
             @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } }
             .leaflet-container { background: #0c0b18 !important; }
-            .leaflet-tile { filter: brightness(0.55) saturate(0.9) !important; }
             .leaflet-control-zoom a { background: #1a1835 !important; color: white !important; border-color: #2d2854 !important; }
             .leaflet-control-attribution { display: none !important; }
           `}</style>
@@ -199,10 +198,12 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
             zoom={zoom}
             className="w-full h-full"
             zoomControl={true}
+            style={{ borderRadius: "inherit" }}
           >
             <MapController center={center} zoom={zoom} />
             <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              key="tiles"
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             />
             {/* Emergency circles */}
