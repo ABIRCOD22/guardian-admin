@@ -88,7 +88,7 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
 
   useEffect(() => {
     fetchEmergencies();
-    const interval = setInterval(fetchEmergencies, 5000);
+    const interval = setInterval(fetchEmergencies, 30000);
     return () => clearInterval(interval);
   }, [fetchEmergencies]);
 

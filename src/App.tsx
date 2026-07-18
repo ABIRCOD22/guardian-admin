@@ -457,7 +457,7 @@ export default function App() {
             )}
           </div>
 
-          <div className={currentTab === "live-map" ? "" : "hidden"}>
+          <div className={`h-full ${currentTab === "live-map" ? "" : "hidden"}`}>
             <LiveMapView
               users={users}
               onSendCommand={(userId, command) => {
