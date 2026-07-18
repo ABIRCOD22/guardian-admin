@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, Polyline, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { SecurityUser } from "../types.js";
@@ -62,18 +62,6 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
   return null;
 }
 
-function TileErrorFix() {
-  const map = useMap();
-  useEffect(() => {
-    map.on("tileerror", () => {
-      if (document.querySelector(".leaflet-tile-loaded")) return;
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-      }).addTo(map);
-    });
-  }, [map]);
-  return null;
-}
 
 export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveMapViewProps) {
   const [center, setCenter] = useState<[number, number]>([23.685, 90.3563]);
@@ -212,11 +200,15 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
             zoomControl={true}
           >
             <MapController center={center} zoom={zoom} />
-            <TileErrorFix />
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             />
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(7, 5, 27, 0.65)', pointerEvents: 'none', zIndex: 500,
+              mixBlendMode: 'multiply'
+            }} />
 
             {/* Emergency circles */}
             {emergencies.map(e => (
