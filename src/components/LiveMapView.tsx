@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { SecurityUser } from "../types.js";
@@ -70,6 +70,15 @@ function MapResizer() {
   return null;
 }
 
+function TileFallback({ onFallback }: { onFallback: () => void }) {
+  useMapEvents({
+    tileerror() {
+      onFallback();
+    }
+  });
+  return null;
+}
+
 export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveMapViewProps) {
   const [center, setCenter] = useState<[number, number]>([23.685, 90.3563]);
   const [zoom, setZoom] = useState(6);
@@ -79,6 +88,11 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
   const [commandResult, setCommandResult] = useState<string | null>(null);
   const [showEmergencyPanel, setShowEmergencyPanel] = useState(false);
   const [liveAlertMessage, setLiveAlertMessage] = useState("");
+
+  const [tileUrl, setTileUrl] = useState("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png");
+  const handleTileError = useCallback(() => {
+    setTileUrl("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+  }, []);
 
   const activeUsers = users.filter(u => u.protectionActive && u.lastLatitude && u.lastLongitude);
   const emergencyUsers = users.filter(u => u.alarmActive && u.lastLatitude && u.lastLongitude);
@@ -209,9 +223,10 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
           >
             <MapController center={center} zoom={zoom} />
             <MapResizer />
+            <TileFallback onFallback={handleTileError} />
             <TileLayer
-              key="tiles"
-              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+              key={tileUrl}
+              url={tileUrl}
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             />
             {/* Emergency circles */}
