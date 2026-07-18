@@ -902,13 +902,16 @@ async function checkProximityAlerts() {
   try {
     const snap = await firestore.collection("emergencies")
       .where("status", "==", "active")
-      .orderBy("timestamp", "desc")
-      .limit(20)
       .get();
 
     const now = Date.now();
+    const docs = snap.docs.sort((a, b) => {
+      const ta = a.data().timestamp?.toMillis?.() || a.data().timestamp || 0;
+      const tb = b.data().timestamp?.toMillis?.() || b.data().timestamp || 0;
+      return tb - ta;
+    });
 
-    for (const doc of snap.docs) {
+    for (const doc of docs) {
       const d = doc.data();
       const emergencyId = doc.id;
       const ts = d.timestamp?.toMillis?.() || d.timestamp || now;
