@@ -190,6 +190,7 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
           <style>{`
             @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } }
             .leaflet-container { background: #0c0b18 !important; }
+            .leaflet-tile { filter: brightness(0.55) saturate(0.9) !important; }
             .leaflet-control-zoom a { background: #1a1835 !important; color: white !important; border-color: #2d2854 !important; }
             .leaflet-control-attribution { display: none !important; }
           `}</style>
@@ -204,12 +205,6 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
             />
-            <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              background: 'rgba(7, 5, 27, 0.65)', pointerEvents: 'none', zIndex: 500,
-              mixBlendMode: 'multiply'
-            }} />
-
             {/* Emergency circles */}
             {emergencies.map(e => (
               <Circle
