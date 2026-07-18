@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, useMapEvents, Polyline } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap, Polyline } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { SecurityUser } from "../types.js";
@@ -71,11 +71,14 @@ function MapResizer() {
 }
 
 function TileFallback({ onFallback }: { onFallback: () => void }) {
-  useMapEvents({
-    tileerror() {
-      onFallback();
-    }
-  });
+  const map = useMap();
+  const fallbackRef = useRef(onFallback);
+  fallbackRef.current = onFallback;
+  useEffect(() => {
+    const handler = () => fallbackRef.current();
+    map.on("tileerror", handler);
+    return () => map.off("tileerror", handler);
+  }, [map]);
   return null;
 }
 
