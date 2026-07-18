@@ -19,8 +19,6 @@ import DashboardView from "./components/DashboardView.js";
 import UsersView from "./components/UsersView.js";
 import NotificationsView from "./components/NotificationsView.js";
 import AppConfigView from "./components/AppConfigView.js";
-import AnalyticsView from "./components/AnalyticsView.js";
-import EventLogsView from "./components/EventLogsView.js";
 import SettingsView from "./components/SettingsView.js";
 import SecurityAuditsView from "./components/SecurityAuditsView.js";
 import TestView from "./components/TestView.js";
@@ -389,9 +387,7 @@ export default function App() {
               {currentTab === "users" && "User & Device Registry"}
               {currentTab === "notifications" && "Direct Dispatch Notifications"}
               {currentTab === "app-config" && "Hardware & Security Policies"}
-              {currentTab === "analytics" && "Subscriber Metrics Analysis"}
               {currentTab === "live-map" && "Live Location & Emergency Map"}
-              {currentTab === "event-logs" && "Event Logs & Triage"}
               {currentTab === "device-logs" && "Device Remote Logs"}
               {currentTab === "test" && "Test Panic Trigger"}
               {currentTab === "vault" && "Secure Vault"}
@@ -459,18 +455,6 @@ export default function App() {
                 onUpdateConfig={handleUpdateConfig}
               />
             )}
-          </div>
-
-          <div className={currentTab === "analytics" ? "" : "hidden"}>
-            <AnalyticsView />
-          </div>
-
-          <div className={currentTab === "event-logs" ? "" : "hidden"}>
-            <EventLogsView
-              logs={logs}
-              onUpdateStatus={handleUpdateLogStatus}
-              onAddActionTrail={handleAddActionTrail}
-            />
           </div>
 
           <div className={currentTab === "live-map" ? "" : "hidden"}>
