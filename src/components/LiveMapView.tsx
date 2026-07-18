@@ -62,6 +62,13 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
   return null;
 }
 
+function MapResizer() {
+  const map = useMap();
+  useEffect(() => {
+    setTimeout(() => map.invalidateSize(), 0);
+  }, [map]);
+  return null;
+}
 
 export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveMapViewProps) {
   const [center, setCenter] = useState<[number, number]>([23.685, 90.3563]);
@@ -201,6 +208,7 @@ export default function LiveMapView({ users, onSendCommand, onSendAlert }: LiveM
             style={{ borderRadius: "inherit" }}
           >
             <MapController center={center} zoom={zoom} />
+            <MapResizer />
             <TileLayer
               key="tiles"
               url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
