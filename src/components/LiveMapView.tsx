@@ -65,7 +65,10 @@ function MapController({ center, zoom }: { center: [number, number]; zoom: numbe
 function MapResizer() {
   const map = useMap();
   useEffect(() => {
-    setTimeout(() => map.invalidateSize(), 0);
+    map.invalidateSize();
+    const observer = new ResizeObserver(() => map.invalidateSize());
+    observer.observe(map.getContainer());
+    return () => observer.disconnect();
   }, [map]);
   return null;
 }
