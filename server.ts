@@ -806,6 +806,231 @@ app.get("/api/emergencies", async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Proximity Alert Engine — dispatch + accept + smart escalation
+// ---------------------------------------------------------------------------
+
+// Track which emergency IDs have already been dispatched for proximity alerts
+const processedEmergencies = new Set<string>();
+
+// Haversine distance (km) between two lat/lng points
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Dispatch proximity alerts to users within `radiusKm` of the emergency
+async function dispatchProximityAlert(
+  emergencyId: string,
+  emergencyLat: number,
+  emergencyLng: number,
+  radiusKm: number,
+  victimName: string,
+  victimDeviceId: string,
+  message: string
+): Promise<number> {
+  if (!isFirebaseReady()) return 0;
+  try {
+    const userSnap = await firestore.collection("users").get();
+    const fcmData: Record<string, string> = {
+      command: "nearby_emergency",
+      emergencyId,
+      victimName,
+      latitude: String(emergencyLat),
+      longitude: String(emergencyLng),
+      victimDeviceId,
+      message
+    };
+    let notifiedCount = 0;
+    const notifiedDeviceIds: string[] = [];
+    const updatedAt = Date.now();
+
+    for (const userDoc of userSnap.docs) {
+      const d = userDoc.data();
+      const deviceId = userDoc.id;
+      // Skip the victim device itself
+      if (deviceId === victimDeviceId) continue;
+      // Skip if no FCM token
+      if (!d.fcmToken) continue;
+      // Skip already notified in previous escalation rounds
+      const alreadyNotified = d.notifiedEmergencies?.[emergencyId] != null;
+      if (alreadyNotified) continue;
+
+      const lat = d.lastLatitude;
+      const lng = d.lastLongitude;
+      if (lat == null || lng == null) continue;
+
+      const dist = haversineKm(emergencyLat, emergencyLng, lat, lng);
+      if (dist > radiusKm) continue;
+
+      const payload = { ...fcmData, distance: dist.toFixed(1) };
+      const sent = await sendFcmToToken(userDoc, payload);
+      if (sent) {
+        notifiedCount++;
+        notifiedDeviceIds.push(deviceId);
+        console.log(`[PROXIMITY] Notified ${deviceId} (${dist.toFixed(1)}km) for emergency ${emergencyId}`);
+      }
+    }
+
+    // Update the emergency doc with notified devices
+    if (notifiedDeviceIds.length > 0) {
+      const notifiedMap: Record<string, number> = {};
+      for (const id of notifiedDeviceIds) {
+        notifiedMap[id] = updatedAt;
+      }
+      await firestore.collection("emergencies").doc(emergencyId).set({
+        proximityDispatched: true,
+        dispatchRadius: radiusKm,
+        lastEscalation: admin.firestore.FieldValue.serverTimestamp(),
+        notifiedDevices: admin.firestore.FieldValue.arrayUnion(...notifiedDeviceIds),
+      }, { merge: true });
+    }
+
+    return notifiedCount;
+  } catch (err) {
+    console.error(`[PROXIMITY] dispatch error:`, err);
+    return 0;
+  }
+}
+
+// Check for unprocessed emergencies and handle escalation
+async function checkProximityAlerts() {
+  if (!isFirebaseReady()) return;
+  try {
+    const snap = await firestore.collection("emergencies")
+      .where("status", "==", "active")
+      .orderBy("timestamp", "desc")
+      .limit(20)
+      .get();
+
+    const now = Date.now();
+
+    for (const doc of snap.docs) {
+      const d = doc.data();
+      const emergencyId = doc.id;
+      const ts = d.timestamp?.toMillis?.() || d.timestamp || now;
+      const victimDeviceId = d.deviceId || "";
+      const victimName = d.message || "Someone";
+      const emergencyLat = d.latitude || 0;
+      const emergencyLng = d.longitude || 0;
+      const responders = d.responders || [];
+      const lastEscalation = d.lastEscalation?.toMillis?.() || d.lastEscalation || 0;
+      const currentRadius = d.dispatchRadius || 0;
+
+      // If there's already a responder, skip
+      if (responders.length > 0) continue;
+
+      // If this is a new emergency (not yet processed) — dispatch at 5km
+      if (!processedEmergencies.has(emergencyId) && emergencyLat && emergencyLng) {
+        processedEmergencies.add(emergencyId);
+        const count = await dispatchProximityAlert(
+          emergencyId, emergencyLat, emergencyLng, 5, victimName, victimDeviceId, d.message || ""
+        );
+        console.log(`[PROXIMITY] Initial dispatch for ${emergencyId}: ${count} devices notified within 5km`);
+        continue;
+      }
+
+      // Escalation: every 2 min widen radius — 5 → 10 → 20 → broadcast
+      if (!emergencyLat || !emergencyLng) continue;
+      const elapsed = now - ts;
+      const sinceLastEsc = now - lastEscalation;
+
+      if (elapsed > 600000 && sinceLastEsc > 120000) {
+        // 10min+ — broadcast to ALL active
+        const count = await dispatchProximityAlert(
+          emergencyId, emergencyLat, emergencyLng, 99999, victimName, victimDeviceId, d.message || ""
+        );
+        console.log(`[PROXIMITY] Broadcast ALL for ${emergencyId}: ${count} devices notified`);
+      } else if (elapsed > 300000 && sinceLastEsc > 120000 && currentRadius < 20) {
+        // 5min+ — widen to 20km
+        const count = await dispatchProximityAlert(
+          emergencyId, emergencyLat, emergencyLng, 20, victimName, victimDeviceId, d.message || ""
+        );
+        console.log(`[PROXIMITY] Escalated ${emergencyId} to 20km: ${count} devices notified`);
+      } else if (elapsed > 120000 && sinceLastEsc > 120000 && currentRadius < 10) {
+        // 2min+ — widen to 10km
+        const count = await dispatchProximityAlert(
+          emergencyId, emergencyLat, emergencyLng, 10, victimName, victimDeviceId, d.message || ""
+        );
+        console.log(`[PROXIMITY] Escalated ${emergencyId} to 10km: ${count} devices notified`);
+      }
+    }
+  } catch (err) {
+    console.error(`[PROXIMITY] check error:`, err);
+  }
+}
+
+// Run proximity check every 30 seconds
+setInterval(checkProximityAlerts, 30000);
+
+// POST /api/emergencies/nearby — manually trigger proximity dispatch
+app.post("/api/emergencies/nearby", async (req, res) => {
+  const { emergencyId } = req.body;
+  if (!emergencyId) return res.status(400).json({ error: "emergencyId required" });
+  if (!isFirebaseReady()) return res.status(400).json({ error: "Firebase not connected" });
+  try {
+    const doc = await firestore.collection("emergencies").doc(emergencyId).get();
+    if (!doc.exists) return res.status(404).json({ error: "Emergency not found" });
+    const d = doc.data()!;
+    const count = await dispatchProximityAlert(
+      emergencyId, d.latitude || 0, d.longitude || 0, 5,
+      d.message || "Someone", d.deviceId || "", d.message || ""
+    );
+    res.json({ success: true, notified: count });
+  } catch (err) {
+    console.error(`[ERROR] POST /api/emergencies/nearby:`, err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// POST /api/emergencies/accept — mark a device as responding
+app.post("/api/emergencies/accept", async (req, res) => {
+  const { emergencyId, deviceId, displayName } = req.body;
+  if (!emergencyId || !deviceId) return res.status(400).json({ error: "emergencyId and deviceId required" });
+  if (!isFirebaseReady()) return res.status(400).json({ error: "Firebase not connected" });
+  try {
+    const doc = await firestore.collection("emergencies").doc(emergencyId).get();
+    if (!doc.exists) return res.status(404).json({ error: "Emergency not found" });
+    const d = doc.data()!;
+    const responders = d.responders || [];
+    // Don't add duplicate
+    if (responders.some((r: any) => r.deviceId === deviceId)) {
+      return res.json({ success: true, message: "Already a responder" });
+    }
+    responders.push({
+      deviceId,
+      displayName: displayName || "Unknown",
+      acceptedAt: admin.firestore.FieldValue.serverTimestamp(),
+      status: "responding"
+    });
+    await doc.ref.update({ responders });
+    console.log(`[PROXIMITY] Responder ${displayName} (${deviceId}) accepted emergency ${emergencyId}`);
+    await addFeedEntry(`Responder ${displayName} accepted emergency ${emergencyId}`, "sync");
+    res.json({ success: true });
+  } catch (err) {
+    console.error(`[ERROR] POST /api/emergencies/accept:`, err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// GET /api/emergencies/responders/:id — fetch responders for an emergency
+app.get("/api/emergencies/responders/:id", async (req, res) => {
+  const { id } = req.params;
+  if (!isFirebaseReady()) return res.json({ responders: [] });
+  try {
+    const doc = await firestore.collection("emergencies").doc(id).get();
+    if (!doc.exists) return res.status(404).json({ error: "Emergency not found" });
+    res.json({ responders: doc.data()?.responders || [] });
+  } catch (err) {
+    console.error(`[ERROR] GET /api/emergencies/responders/${id}:`, err);
+    res.status(500).json({ error: String(err) });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Vault — sensitive user data behind env-var PIN
 // ---------------------------------------------------------------------------
 const VAULT_PIN = process.env.VAULT_PIN || "0000";
